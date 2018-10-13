@@ -83,11 +83,11 @@ static void dump_history(void);
 /* list of installed commands */
 static cmd_block *command_list = NULL;
 
-/* a linear array of statically defined command blocks,
-   defined in the linker script.
+/* An array of statically defined command blocks.
+ * The start and stop variables are defined automatically by the linker.
  */
-extern cmd_block __commands_start;
-extern cmd_block __commands_end;
+extern cmd_block __start_commands;
+extern cmd_block __stop_commands;
 
 static int cmd_help(int argc, const cmd_args *argv);
 static int cmd_help_panic(int argc, const cmd_args *argv);
@@ -124,7 +124,7 @@ int console_init(void)
 
     /* add all the statically defined commands to the list */
     cmd_block *block;
-    for (block = &__commands_start; block != &__commands_end; block++) {
+    for (block = &__start_commands; block != &__stop_commands; block++) {
         console_register_commands(block);
     }
 
