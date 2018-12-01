@@ -26,15 +26,19 @@
 #include <err.h>
 #include <trace.h>
 
-extern struct device __devices[];
-extern struct device __devices_end[];
+extern struct device __start_devices[];
+extern struct device __stop_devices[];
+
+/* declare one null driver and device */
+struct driver __driver_null;
+DEVICE_INSTANCE(null, null0, 0);
 
 status_t device_init_all(void)
 {
     status_t res = NO_ERROR;
 
-    struct device *dev = __devices;
-    while (dev != __devices_end) {
+    struct device *dev = __start_devices;
+    while (dev != __stop_devices) {
         status_t code = device_init(dev);
 
         if (code < 0) {
@@ -54,8 +58,8 @@ status_t device_fini_all(void)
 {
     status_t res = NO_ERROR;
 
-    struct device *dev = __devices;
-    while (dev != __devices_end) {
+    struct device *dev = __start_devices;
+    while (dev != __stop_devices) {
         status_t code = device_fini(dev);
 
         if (code < 0) {

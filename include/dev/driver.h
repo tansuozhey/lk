@@ -74,7 +74,7 @@ struct driver {
 
 #define DRIVER_EXPORT(type_, ops_) \
     const struct driver concat(__driver_, type_) \
-        __ALIGNED(sizeof(void *)) __SECTION(".drivers") = { \
+        __ALIGNED(sizeof(void *)) __SECTION("drivers") = { \
         .type = #type_, \
         .ops = ops_, \
     }
@@ -82,7 +82,7 @@ struct driver {
 #define DEVICE_INSTANCE(type_, name_, config_) \
     extern struct driver concat(__driver_, type_); \
     struct device concat(__device_, concat(type_, concat(_, name_))) \
-        __ALIGNED(sizeof(void *)) __SECTION(".devices") = { \
+        __ALIGNED(sizeof(void *)) __SECTION("devices") = { \
         .name = #name_, \
         .driver = &concat(__driver_, type_), \
         .config = config_, \

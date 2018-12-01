@@ -58,12 +58,12 @@ static struct list_node mounts = LIST_INITIAL_VALUE(mounts);
 static struct list_node fses = LIST_INITIAL_VALUE(fses);
 
 // defined in the linker script
-extern const struct fs_impl __fs_impl_start;
-extern const struct fs_impl __fs_impl_end;
+extern const struct fs_impl __start_fs_impls;
+extern const struct fs_impl __stop_fs_impls;
 
 static const struct fs_impl *find_fs(const char *name)
 {
-    for (const struct fs_impl *fs = &__fs_impl_start; fs != &__fs_impl_end; fs++) {
+    for (const struct fs_impl *fs = &__start_fs_impls; fs != &__stop_fs_impls; fs++) {
         if (!strcmp(name, fs->name))
             return fs;
     }
