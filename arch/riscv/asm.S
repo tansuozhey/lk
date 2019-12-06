@@ -59,6 +59,12 @@ FUNCTION(riscv_context_switch)
 
     ret
 
+#if ARCH_RISCV_MACHINE_MODE
+#define REGMODE(reg) m ## reg
+#else
+#define REGMODE(reg) s ## reg
+#endif
+
 /* top level exception handler for riscv in non vectored mode */
 .balign 4
 FUNCTION(riscv_exception_entry)
@@ -80,10 +86,10 @@ FUNCTION(riscv_exception_entry)
     STR    a1, REGOFF(4)(sp)
     STR    a0, REGOFF(3)(sp)
     STR    ra, REGOFF(2)(sp)
-    csrr   t0, mstatus
+    csrr   t0, REGMODE(status)
     STR    t0, REGOFF(1)(sp)
-    csrr   a0, mcause
-    csrr   a1, mepc
+    csrr   a0, REGMODE(cause)
+    csrr   a1, REGMODE(epc)
     STR    a1, REGOFF(0)(sp)
     mv     a2, sp
 
@@ -91,9 +97,9 @@ FUNCTION(riscv_exception_entry)
 
     /* put everything back */
     LDR    t0, REGOFF(0)(sp)
-    csrw   mepc, t0
+    csrw   REGMODE(epc), t0
     LDR    t0, REGOFF(1)(sp)
-    csrw   mstatus, t0
+    csrw   REGMODE(status), t0
 
     LDR    ra, REGOFF(2)(sp)
     LDR    a0, REGOFF(3)(sp)
@@ -113,4 +119,4 @@ FUNCTION(riscv_exception_entry)
     LDR    t6, REGOFF(17)(sp)
     addi   sp, sp, REGOFF(20)
 
-    mret
+    REGMODE(ret)

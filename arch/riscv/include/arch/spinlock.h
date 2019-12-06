@@ -46,13 +46,13 @@ static inline bool arch_spin_lock_held(spin_lock_t *lock) {
 
 static inline void
 arch_interrupt_save(spin_lock_saved_state_t *statep, spin_lock_save_flags_t flags) {
-    /* disable interrupts by clearing the MIE bit while atomically saving the old state */
-    *statep = riscv_csr_read_clear(mstatus, RISCV_STATUS_MIE) & RISCV_STATUS_MIE;
+    /* disable interrupts by clearing the M/SIE bit while atomically saving the old state */
+    *statep = riscv_csr_read_clear(RISCV_REG(status), RISCV_STATUS_IE_BIT) & RISCV_STATUS_IE_BIT;
 }
 
 static inline void
 arch_interrupt_restore(spin_lock_saved_state_t old_state, spin_lock_save_flags_t flags) {
-    /* drop the old MIE flag into the status register */
-    riscv_csr_set(mstatus, old_state);
+    /* drop the old M/SIE flag into the status register */
+    riscv_csr_set(RISCV_REG(status), old_state);
 }
 

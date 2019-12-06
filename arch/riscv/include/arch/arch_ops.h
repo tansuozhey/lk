@@ -11,17 +11,23 @@
 #include <lk/debug.h>
 #include <arch/riscv.h>
 
+#if ARCH_RISCV_MACHINE_MODE
+#define RISCV_STATUS_IE_BIT RISCV_STATUS_MIE
+#else
+#define RISCV_STATUS_IE_BIT RISCV_STATUS_SIE
+#endif
+
 static inline void arch_enable_ints(void) {
-    riscv_csr_set(mstatus, RISCV_STATUS_MIE);
+    riscv_csr_set(RISCV_REG(status), RISCV_STATUS_IE_BIT);
 }
 
 static inline void arch_disable_ints(void) {
-    riscv_csr_clear(mstatus, RISCV_STATUS_MIE);
+    riscv_csr_clear(RISCV_REG(status), RISCV_STATUS_IE_BIT);
 }
 
 static inline bool arch_ints_disabled(void) {
-    ulong val = riscv_csr_read(mstatus);
-    return !(val & RISCV_STATUS_MIE);
+    ulong val = riscv_csr_read(RISCV_REG(status));
+    return !(val & RISCV_STATUS_IE_BIT);
 }
 
 static inline int atomic_add(volatile int *ptr, int val) {
@@ -52,10 +58,10 @@ static inline void set_current_thread(struct thread *t) {
 }
 
 static inline uint32_t arch_cycle_count(void) {
-    uint32_t count;
+    uint32_t count = 0;
 
     //__asm__("rdcycle %0" : "=r"(count));
-    count = riscv_csr_read(mcycle);
+    //count = riscv_csr_read(RISCV_REG(cycle));
     return count;
 }
 

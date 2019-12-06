@@ -7,11 +7,13 @@ MODULE_SRCS += $(LOCAL_DIR)/arch.c
 MODULE_SRCS += $(LOCAL_DIR)/asm.S
 MODULE_SRCS += $(LOCAL_DIR)/clint.c
 MODULE_SRCS += $(LOCAL_DIR)/exceptions.c
+MODULE_SRCS += $(LOCAL_DIR)/sbi.c
 MODULE_SRCS += $(LOCAL_DIR)/thread.c
 
 GLOBAL_DEFINES += SMP_MAX_CPUS=1
 GLOBAL_DEFINES += PLATFORM_HAS_DYNAMIC_TIMER=1
 
+# compile for 32 or 64 bit
 SUBARCH ?= 32
 
 WITH_LINKER_GC ?= 0
@@ -23,6 +25,14 @@ ROMBASE ?= 0
 GLOBAL_DEFINES += ROMBASE=$(ROMBASE)
 GLOBAL_DEFINES += MEMBASE=$(MEMBASE)
 GLOBAL_DEFINES += MEMSIZE=$(MEMSIZE)
+
+# is the kernel expected to be running in supervisor or machine mode
+ARCH_RISCV_SUPERVISOR_MODE ?= 0
+ifeq (true,$(call TOBOOL,$(ARCH_RISCV_SUPERVISOR_MODE)))
+GLOBAL_DEFINES += ARCH_RISCV_SUPERVISOR_MODE=1
+else
+GLOBAL_DEFINES += ARCH_RISCV_MACHINE_MODE=1
+endif
 
 # based on 32 or 64 bitness, select the right toolchain and some
 # compiler codegen flags

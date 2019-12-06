@@ -16,7 +16,12 @@ FUNCTION(_start)
 .option pop
 
     // if our hart isnt 0, trap the cpu
+#if ARCH_RISCV_MACHINE_MODE
     csrr    t0, mhartid
+#else
+    // hart id is passed in via a register from OpenSBI
+    mv      t0, a0
+#endif
     bnez    t0, .Lsecondary_trap
 
     // set the default stack

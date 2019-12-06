@@ -82,7 +82,7 @@ DISPLAY_ARGS=" -device virtio-gpu-device -serial stdio"
 # the following args only really make sense on non embedded versions
 if (( ! $DO_EMBEDDED )); then
     ARGS=" -cpu $CPU -m $MEMSIZE -smp $SMP -machine $MACHINE -kernel build-${PROJECT}/lk.elf"
-    ARGS+=" -bios none"
+    ARGS+=" -bios default"
     if (( $DO_BLOCK )); then
         ARGS+=$BLOCK_ARGS
     fi

@@ -4,6 +4,7 @@ MODULE := $(LOCAL_DIR)
 
 ARCH := riscv
 SUBARCH ?= 32
+ARCH_RISCV_SUPERVISOR_MODE := 1
 
 MODULE_DEPS += lib/cbuf
 MODULE_DEPS += lib/fdt
@@ -14,7 +15,8 @@ MODULE_SRCS += $(LOCAL_DIR)/uart.c
 
 #ROMBASE ?= 0x20400000 # if running from rom, start here
 MEMBASE ?= 0x80000000
-MEMSIZE ?= 0x00100000 # default to 1MB
+MEMSIZE ?= 0x01000000 # default to 1MB
+KERNEL_LOAD_OFFSET ?= 0x00200000 # default to 1MB
 
 # sifive_e or _u?
 GLOBAL_DEFINES += PLATFORM_${VARIANT}=1
