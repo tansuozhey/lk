@@ -7,11 +7,13 @@ MODULE_SRCS += $(LOCAL_DIR)/arch.c
 MODULE_SRCS += $(LOCAL_DIR)/asm.S
 MODULE_SRCS += $(LOCAL_DIR)/exceptions.c
 MODULE_SRCS += $(LOCAL_DIR)/thread.c
+MODULE_SRCS += $(LOCAL_DIR)/mmu.c
 MODULE_SRCS += $(LOCAL_DIR)/mp.c
 MODULE_SRCS += $(LOCAL_DIR)/time.c
 
 SMP_MAX_CPUS ?= 1
 BOOT_HART ?= 0
+RISCV_MMU ?= none
 
 GLOBAL_DEFINES += SMP_MAX_CPUS=$(SMP_MAX_CPUS)
 GLOBAL_DEFINES += PLATFORM_HAS_DYNAMIC_TIMER=1
@@ -28,19 +30,86 @@ RISCV_MODE ?= machine
 ifeq ($(strip $(RISCV_MODE)),machine)
 $(info RISCV: Machine Mode)
 GLOBAL_DEFINES += RISCV_M_MODE=1
-else
-ifeq ($(strip $(RISCV_MODE)),supervisor)
+ifneq ($(RISCV_MMU),none)
+$(error RISCV mmu not supported in machine mode)
+endif
+else ifeq ($(strip $(RISCV_MODE)),supervisor)
 $(info RISCV: Supervisor Mode)
 GLOBAL_DEFINES += RISCV_S_MODE=1
 else
 $(error Unknown RISC-V mode: "$(strip $(RISCV_MODE))" (valid values are "machine", "supervisor"))
 endif
+
+ifeq ($(RISCV_MMU),sv48)
+ifeq ($(SUBARCH),32)
+$(error RISCV: sv48 mmu not supported for 32 bit riscv)
+endif
+$(info RISCV: MMU sv48)
+GLOBAL_DEFINES += RISCV_MMU=48
+WITH_KERNEL_VM ?= 1
+
+# 48 bits split between two 47 bit halves
+KERNEL_ASPACE_BASE := 0xffff800000000000
+KERNEL_ASPACE_SIZE := 0x0000800000000000
+USER_ASPACE_BASE   := 0x0000000001000000
+USER_ASPACE_SIZE   := 0x00007ffffe000000
+
+else ifeq ($(RISCV_MMU),sv39)
+ifeq ($(SUBARCH),32)
+$(error RISCV: sv39 mmu not supported for 32 bit riscv)
+endif
+$(info RISCV: MMU sv39)
+GLOBAL_DEFINES += RISCV_MMU=39
+WITH_KERNEL_VM ?= 1
+
+# 39 bits split between two 38 bit halves
+KERNEL_ASPACE_BASE := 0xffffffe000000000
+KERNEL_ASPACE_SIZE := 0x0000002000000000
+USER_ASPACE_BASE   := 0x0000000001000000
+USER_ASPACE_SIZE   := 0x0000001ffe000000
+
+else ifeq ($(RISCV_MMU),sv32)
+$(info RISCV: MMU sv32)
+GLOBAL_DEFINES += RISCV_MMU=32
+WITH_KERNEL_VM ?= 1
+
+# 32 bits split between two 31 bit halves
+KERNEL_ASPACE_BASE := 0x80000000
+KERNEL_ASPACE_SIZE := 0x80000000
+USER_ASPACE_BASE   := 0x01000000
+USER_ASPACE_SIZE   := 0x7e000000
+
+else ifeq ($(RISCV_MMU),none)
+else
+$(error Unknown RISCV_MMU: "$(strip $(RISCV_MMU))" (valid values are "none", "sv32", "sv39", "sv48"))
 endif
 
-WITH_LINKER_GC ?= 0
+ifeq ($(WITH_KERNEL_VM),1)
+
+KERNEL_ASPACE_BASE := 0xffff000000000000
+KERNEL_ASPACE_SIZE := 0x0001000000000000
+USER_ASPACE_BASE   := 0x0000000001000000
+USER_ASPACE_SIZE   := 0x0000fffffe000000
+
+GLOBAL_DEFINES += \
+    KERNEL_ASPACE_BASE=$(KERNEL_ASPACE_BASE) \
+    KERNEL_ASPACE_SIZE=$(KERNEL_ASPACE_SIZE) \
+    USER_ASPACE_BASE=$(USER_ASPACE_BASE) \
+    USER_ASPACE_SIZE=$(USER_ASPACE_SIZE)
+
+KERNEL_BASE ?= $(KERNEL_ASPACE_BASE)
+KERNEL_LOAD_OFFSET ?= 0
+
+GLOBAL_DEFINES += KERNEL_BASE=$(KERNEL_BASE)
+GLOBAL_DEFINES += KERNEL_LOAD_OFFSET=$(KERNEL_LOAD_OFFSET)
+
+else # no kernel vm
 
 KERNEL_BASE ?= $(MEMBASE)
 KERNEL_LOAD_OFFSET ?= 0
+
+endif
+
 ROMBASE ?= 0
 
 GLOBAL_DEFINES += ROMBASE=$(ROMBASE)
@@ -62,6 +131,7 @@ ifndef TOOLCHAIN_PREFIX
 TOOLCHAIN_PREFIX := riscv64-elf-
 endif
 ARCH_COMPILEFLAGS := -march=rv64imac -mabi=lp64 -mcmodel=medany
+GLOBAL_DEFINES += IS_64BIT=1
 
 else
 $(error SUBARCH not set or set to something unknown)
@@ -75,6 +145,8 @@ GLOBAL_DEFINES += ARCH_RISCV_EMBEDDED=1
 else
 ARCH_OPTFLAGS ?= -O2
 endif
+
+WITH_LINKER_GC ?= 0
 
 LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(GLOBAL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) $(GLOBAL_CFLAGS) -print-libgcc-file-name)
 $(info LIBGCC = $(LIBGCC))
