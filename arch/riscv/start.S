@@ -34,7 +34,7 @@ FUNCTION(_start)
 
     // if our hart isnt BOOT_HART, trap the cpu
     li      t2, BOOT_HART
-    bne     t2, a0, .Lsecondary_trap
+    bne     t2, a0, secondary_trap
 
 #if ARCH_RISCV_TWOSEGMENT
     // copy preinitialized data from flash to memory
@@ -60,6 +60,13 @@ FUNCTION(_start)
     add     t0, t0, 4
     bne     t0, t1, 0b
 
+#if RISCV_MMU
+    jal     _mmu_init
+#endif
+
+    // TODO: remove
+    j       .
+
 #if WITH_SMP
     // Release any other harts into riscv_secondary_entry
     fence   w, w
@@ -74,17 +81,53 @@ FUNCTION(_start)
     // should never return here
     j       .
 
-.Lsecondary_trap:
+LOCAL_FUNCTION(secondary_trap)
 #if WITH_SMP
     // wait for _boot_status to be nonzero, then go into riscv_secondary_entry
     la      t5, _boot_status
     lb      t0, (t5)
-    beqz    t0, .Lsecondary_trap
+    beqz    t0, secondary_trap
+
+#if RISCV_MMU
+    // TODO: enable the mmu on this core
+    j       .
+#endif
+
+
     jal     riscv_secondary_entry
 #else
     wfi
     j       .
 #endif
+
+    // initialize the kernel page tables
+    // TODO: follow mmu_initial_mappings
+    // for now map the first 512GB of the physical address space at the
+    // bottom of the kernel address space using a single terapage
+LOCAL_FUNCTION(_mmu_init)
+
+    // map the first 512GB using a single 512GB terapage
+    la      a0, kernel_pgtable
+    li      a1, (0 | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1 << 0)) // address 0, G, RWX
+    li      a2, (8 * 256)
+    add     a2, a0, a2
+    sd      a1, (a2)
+
+    // identity map at 0 to cover where we're already running
+    sd      a1, (a0)
+
+    // set the satp register and enable the mmu
+    // sv48, ASID 0, kernel_pgtable address
+    srli    a1, a0, 12
+    li      a2, 9
+    slli    a2, a2, 60
+    or      a1, a1, a2
+    csrw    satp, a1
+
+    // global tlb fence
+    sfence.vma  zero, zero
+
+    ret
 
 .bss
 .align 4
