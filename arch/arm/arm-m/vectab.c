@@ -30,6 +30,7 @@ extern void _systick(void);
 extern struct __debugger_info__ _debugger_info;
 #endif
 
+//开机运行的汇编函数//通过system-onesegment.ld  system-twosegment.ld调用
 const void *const __SECTION(".text.boot.vectab1") vectab[] = {
     /* arm exceptions */
     initial_stack + sizeof(initial_stack),

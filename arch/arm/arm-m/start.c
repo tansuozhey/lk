@@ -15,6 +15,7 @@ extern unsigned int __bss_start, __bss_end;
 
 extern void lk_main(void) __NO_RETURN __EXTERNALLY_VISIBLE;
 
+//开机执行的第一个函数
 void _start(void) {
     /* copy data from rom */
     if (&__data_start != &__data_start_rom) {
@@ -30,5 +31,5 @@ void _start(void) {
     while (bss != &__bss_end)
         *bss++ = 0;
 
-    lk_main();
+    lk_main(); //初始化函数
 }

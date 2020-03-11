@@ -56,6 +56,19 @@ static void call_constructors(void) {
     }
 }
 
+//开机后执行的第二个函数，是lk系统的主要mainloop
+/*
+lkmain 小结：
+
+。初始化线程池，建立线程管理链表、运行队列等；
+
+。初始化各种平台硬件，包括irq、timer，wdt，uart，led，pmic，i2c，gpio等，建立lk基本运行环境；
+
+。初始化内核heap、内核timer等；
+
+。创建系统初始化主线程，进入bootstrap2执行，使能中断，当前线程进入idle;
+
+*/
 /* called from arch code */
 void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3) {
     // save the boot args
@@ -65,6 +78,10 @@ void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3) {
     lk_boot_args[3] = arg3;
 
     // get us into some sort of thread context
+    /* 早期初始化线程池的上下文，包括运行队列、线程链表的建立等，
+         lk架构支持多线程，但是此阶段只有一个cpu处于online，
+         所以也只有一条代码执行路径.
+     */
     thread_init_early();
 
     // early arch stuff
@@ -102,6 +119,7 @@ void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3) {
 
     lk_primary_cpu_init_level(LK_INIT_LEVEL_KERNEL, LK_INIT_LEVEL_THREADING - 1);
 
+	//支持多线程的小系统
     // create a thread to complete system initialization
     dprintf(SPEW, "creating bootstrap completion thread\n");
     thread_t *t = thread_create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
@@ -113,6 +131,7 @@ void lk_main(ulong arg0, ulong arg1, ulong arg2, ulong arg3) {
     thread_become_idle();
 }
 
+//系统初始化函数
 static int bootstrap2(void *arg) {
     dprintf(SPEW, "top of bootstrap2()\n");
 
@@ -122,6 +141,11 @@ static int bootstrap2(void *arg) {
     // initialize the rest of the platform
     dprintf(SPEW, "initializing platform\n");
     lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH, LK_INIT_LEVEL_PLATFORM - 1);
+	
+	/*
+	  平台相关初始化，包括nand/emmc，LCM显示驱动，启动模式选择，加载logo资源，
+	  具体代码流程如下时序图.
+	*/
     platform_init();
 
     // initialize the target
@@ -131,6 +155,10 @@ static int bootstrap2(void *arg) {
 
     dprintf(SPEW, "calling apps_init()\n");
     lk_primary_cpu_init_level(LK_INIT_LEVEL_TARGET, LK_INIT_LEVEL_APPS - 1);
+	
+	/*
+	  app初始化，跳转到mt_boot_init入口开始执行,对应的 ".apps" 这个section.
+	*/
     apps_init();
 
     lk_primary_cpu_init_level(LK_INIT_LEVEL_APPS, LK_INIT_LEVEL_LAST);

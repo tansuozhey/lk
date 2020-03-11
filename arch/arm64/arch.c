@@ -44,6 +44,7 @@ void arch_early_init(void) {
     platform_init_mmu_mappings();
 }
 
+//针对芯片机构的初始化，是arm、x86、powerpc等等
 void arch_init(void) {
 #if WITH_SMP
     arch_mp_init_percpu();
